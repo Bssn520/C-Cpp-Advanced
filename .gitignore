@@ -1,0 +1,37 @@
+.Ds_Store
+.vscode/
+VsCode/
+*.dSYM/
+# 忽略所有文件夹下的所有内容
+*
+
+# 允许特殊文件格式
+!.gitignore
+!**/*.md
+!**/*.txt
+!**/*.html
+!**/*.js
+!**/*.css
+
+
+# 允许子目录中的 C 文件
+!**/*.c
+
+# 允许子目录中的 C++ 文件
+!**/*.cpp
+!**/*.cc
+!**/*.cxx
+
+# 允许子目录中的 头 文件
+!**/*.h
+!**/*.H
+!**/*.hxx
+!**/*.hpp
+
+# 允许子目录中的 makefile 文件
+!**/makefile
+!**/Makefile
+!**/CMakeLists.txt
+
+# 允许子目录本身被追踪
+!*/
