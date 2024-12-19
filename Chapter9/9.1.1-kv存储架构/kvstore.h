@@ -42,9 +42,9 @@ int kvstore_array_mod(char *key, char *value);
 #define NETWORK_EPOLL 0
 #define NETWORK_NTYCO 1
 #define NETWORK_IOURING 2
+#define ENABLE_NETWORK_SELECT NETWORK_NTYCO
 
 #define KVS_ARRAY_ENABLE 1
-#define ENABLE_NETWORK_SELECT NETWORK_EPOLL
 
 #if KVS_ARRAY_ENABLE
 

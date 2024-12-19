@@ -3,6 +3,16 @@
 #include <string.h>
 #include "kvstore.h"
 
+/*
+返回值    结果
+0       操作成功
+>0      NOT EXIST
+<0      ERROR
+
+NULL    ERROR | NOT EXIST
+
+*/
+
 struct kvs_array_item array_table[KVS_ARRAY_SIZE];
 
 int array_index = 0;
@@ -25,6 +35,17 @@ int kvstore_array_set(char *key, char *value)
     if (key == NULL || value == NULL || array_index == KVS_ARRAY_SIZE)
         return -1;
 
+    // 如果 key 已经存在
+    if (kvstore_key_exist(key) != -1)
+    {
+#ifdef DEBUG
+        printf("kvstore_array_set: key exist already, update key to new value\n");
+#endif // DEBUG
+        kvstore_array_mod(key, value);
+        return 0;
+    }
+
+    // 如果 key 不存在
     char *kcopy = kvstore_malloc(strlen(key) + 1);
     if (kcopy == NULL)
         return -1;
@@ -39,20 +60,10 @@ int kvstore_array_set(char *key, char *value)
     }
     strncpy(vcopy, value, strlen(value) + 1);
 
-    // 如果 key 已经存在
-    if (kvstore_key_exist(key) != -1)
-    {
-        printf("kvstore_array_set: key exist already\n");
-        printf("array length: %d\n", array_index);
-        return 0;
-    }
-
     array_table[array_index].key = kcopy;
     array_table[array_index].value = vcopy;
 
     array_index++;
-
-    printf("array length: %d\n", array_index);
 
     return 0;
 }
@@ -79,7 +90,7 @@ int kvstore_array_del(char *key)
 
     int i = kvstore_key_exist(key);
     if (i == -1) // 如果 key 不存在
-        return -1;
+        return 1;
 
     // 如果 key 存在
     kvstore_free(array_table[i].key);
@@ -101,7 +112,7 @@ int kvstore_array_mod(char *key, char *newValue)
     int i = kvstore_key_exist(key);
 
     if (i == -1) // 如果 key 不存在
-        return -1;
+        return 1;
 
     // 如果 key 存在
     char *tmp = array_table[i].value;

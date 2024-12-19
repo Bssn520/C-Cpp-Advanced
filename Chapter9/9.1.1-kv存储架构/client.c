@@ -90,13 +90,18 @@ int main()
 
 #elif 1
 
-    char *msg = "SET key1 value1";
+    char *msg[] = {"SET key setVal", "GET key", "MOD key modVal", "GET key", "SET key setVal2", "GET key", "DEL key", "GET key"};
 
-    if (send(sockfd, msg, strlen(msg), 0) == -1)
+    for (int i = 0; i < 8; i++)
     {
-        perror("send");
-        close(sockfd);
+        if (send(sockfd, msg[i], strlen(msg[i]), 0) == -1)
+        {
+            perror("send");
+            close(sockfd);
+        }
+        sleep(1);
     }
+
 
 #endif
 
