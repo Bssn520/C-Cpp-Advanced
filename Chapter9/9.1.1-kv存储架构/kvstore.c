@@ -73,14 +73,12 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         int ret = kvstore_array_set(tokens[1], tokens[2]);
         if (ret == 0)
         {
-#ifdef DEBUG
-            printf("--- SET: %d ---\n", ret);
-#endif // DEBUG
+            LOG("--- SET: %d ---\n\n", ret);
             snprintf(msg, BUFFER_LENGTH, "SUCCESS");
         }
         else if (ret < 0)
         {
-            printf("--- ERROR ---\n");
+            LOG("--- ERROR ---\n\n");
             snprintf(msg, BUFFER_LENGTH, "ERROR");
         }
         break;
@@ -90,16 +88,12 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         char *value = kvstore_array_get(tokens[1]);
         if (value)
         {
-#ifdef DEBUG
-            printf("---The value of %s is %s ---\n", tokens[1], value);
-#endif // DEBUG
+            LOG("---The value of %s is %s ---\n\n", tokens[1], value);
             snprintf(msg, BUFFER_LENGTH, "%s", value);
         }
         else
         {
-#ifdef DEBUG
-            printf("--- NO EXIST ---\n");
-#endif // DEBUG
+            LOG("--- NO EXIST ---\n\n");
             snprintf(msg, BUFFER_LENGTH, "NO EXIST");
         }
         break;
@@ -109,19 +103,17 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         int ret = kvstore_array_del(tokens[1]);
         if (ret == 0)
         {
-#ifdef DEBUG
-            printf("--- DEL %d ---\n", ret);
-#endif // DEBUG
+            LOG("--- DEL %d ---\n\n", ret);
             snprintf(msg, BUFFER_LENGTH, "SUCCESS");
         }
         else if (ret > 0)
         {
-            printf("--- NO EXIST ---\n");
+            LOG("--- NO EXIST ---\n\n");
             snprintf(msg, BUFFER_LENGTH, "NO EXIST");
         }
         else
         {
-            printf("--- ERROR ---\n");
+            LOG("--- ERROR ---\n\n");
             snprintf(msg, BUFFER_LENGTH, "ERROR");
         }
         break;
@@ -131,26 +123,24 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         int ret = kvstore_array_mod(tokens[1], tokens[2]);
         if (ret == 0)
         {
-#ifdef DEBUG
-            printf("--- MOD %d ---\n", ret);
-#endif // DEBUG
+            LOG("--- MOD %d ---\n\n", ret);
             snprintf(msg, BUFFER_LENGTH, "SUCCESS");
         }
         else if (ret > 0)
         {
-            printf("--- NO EXIST ---\n");
+            LOG("--- NO EXIST ---\n\n");
             snprintf(msg, BUFFER_LENGTH, "NO EXIST");
         }
         else
         {
-            printf("--- ERROR ---\n");
+            LOG("--- ERROR ---\n\n");
             snprintf(msg, BUFFER_LENGTH, "ERROR");
         }
         break;
     }
     default:
     {
-        printf("cmd: %s\n", commands[cmd]);
+        LOG("cmd: %s\n", commands[cmd]);
         assert(0);
     }
     }
@@ -161,9 +151,7 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
 // 获取并处理来自 reactor 的请求
 int kvstore_request(connection_t *item)
 {
-#ifdef DEBUG
-    printf("\n--- recv: %s ---\n", item->rbuffer);
-#endif // DEBUG
+    LOG("--- recv: %s ---\n", item->rbuffer);
 
     char *msg = item->rbuffer;
 
@@ -172,11 +160,7 @@ int kvstore_request(connection_t *item)
     int count = kvstore_split_token(msg, tokens);
 
     for (int i = 0; i < count; ++i)
-    {
-#ifdef DEBUG
-        printf("tokens[%d]: %s\n", i, tokens[i]);
-#endif // DEBUG
-    }
+        LOG("tokens[%d]: %s\n", i, tokens[i]);
 
     kvstore_parser_protocol(item, tokens, count);
 

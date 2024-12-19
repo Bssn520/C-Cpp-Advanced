@@ -1,6 +1,17 @@
 #ifndef _KV_STORE_H_
 
 #include <stddef.h> // size_t
+#include <stdio.h> // fprintf
+
+// 日志开关宏
+#define ENABLE_LOG
+
+#ifdef ENABLE_LOG
+#define LOG(_fmt, ...) fprintf(stdout, "[%s : %d]: " _fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#else
+#define LOG(_fmt, ...)
+#endif // ENABLE_LOG
+
 
 #define BUFFER_LENGTH 1024
 

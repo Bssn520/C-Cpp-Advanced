@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/epoll.h>
-#include <sys/sendfile.h> /* sendfile */
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -15,57 +14,6 @@ int set_event(int fd, int event, int flag);
 int accept_cb(int listern_fd);
 int recv_cb(int connected_fd);
 int send_cb(int connected_fd);
-
-
-#define ENABLE_HTTP_RESPONSE 1
-
-#if ENABLE_HTTP_RESPONSE
-
-int http_response(connection_t *connection)
-{
-#if 0 // sendfile 发送文件内容
-    int filefd = open("index.html", O_RDONLY);
-
-    struct stat file_stat;
-    fstat(filefd, &file_stat);
-    off_t file_size = file_stat.st_size;
-    // 构建 HTTP 响应头
-    connection->wlength = sprintf(connection->wbuffer,
-                                  "HTTP/1.1 200 OK\r\n"
-                                  "Content-Type: text/html\r\n"
-                                  "Content-Length: %ld\r\n"
-                                  "\r\n",
-                                  file_size);
-
-    write(connection->fd, connection->wbuffer, connection->wlength);
-
-    // 使用 sendfile 发送文件内容
-    off_t offset = 0;
-    ssize_t bytes_sent;
-    while (offset < file_size)
-    {
-        bytes_sent = sendfile(connection->fd, filefd, &offset, file_size - offset);
-        if (bytes_sent == -1)
-        {
-            perror("sendfile");
-            close(filefd);
-            return -1;
-        }
-    }
-
-    close(filefd);
-#elif 1 // 测试
-    connection->wlength = sprintf(connection->wbuffer,
-                                  "HTTP/1.1 200 OK\r\n"
-                                  "Content-Type: text/html\r\n"
-                                  "Content-Length: 95\r\n\r\n"
-                                  "<html><head><title>Hello, Reactor!</title></head><body><h1>Hello, Reactor!</h1></body></html>\r\n");
-#endif
-
-    return connection->wlength;
-}
-
-#endif // ENABLE_HTTP
 
 int epfd = 0;
 connection_t connection_list[1024] = {0};
@@ -195,16 +143,8 @@ int recv_cb(int connected_fd)
     // 发送完成后修改 connected_fd 状态以待下次接收
     set_event(connected_fd, EPOLLOUT, 0);
 
-#if 0
-    memcpy(connection_list[connected_fd].wbuffer, connection_list[connected_fd].rbuffer, connection_list[connected_fd].rlength);
-    connection_list[connected_fd].wlength = connection_list[connected_fd].rlength;
-#elif 0
-    // http_request(&connection_list[connected_fd]);
-    // http_response(&connection_list[connected_fd]);
-#elif 1
     kvstore_request(&connection_list[connected_fd]);
     connection_list[connected_fd].wlength = strlen(connection_list[connected_fd].wbuffer);
-#endif
 
     return count;
 }

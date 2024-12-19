@@ -38,9 +38,7 @@ int kvstore_array_set(char *key, char *value)
     // 如果 key 已经存在
     if (kvstore_key_exist(key) != -1)
     {
-#ifdef DEBUG
-        printf("kvstore_array_set: key exist already, update key to new value\n");
-#endif // DEBUG
+        LOG("kvstore_array_set: key exist already, update key to new value\n\n");
         kvstore_array_mod(key, value);
         return 0;
     }

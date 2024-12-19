@@ -110,7 +110,7 @@ void server(void *arg)
     bind(fd, (struct sockaddr *)&local, sizeof(struct sockaddr_in));
 
     listen(fd, 20);
-    // printf("listen port : %d\n", port);
+    LOG("listen port : %d\n", port);
 
 
     struct timeval tv_begin;
