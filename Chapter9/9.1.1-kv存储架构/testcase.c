@@ -61,19 +61,43 @@ void test_case(int connfd, char *msg, char *pattern, char *casename)
     equals(pattern, result, casename);
 }
 
+// 数据存储引擎测试
 void array_testcase(int connfd)
 {
     test_case(connfd, "SET Name Luke", "SUCCESS", "SETcase");
     test_case(connfd, "GET Name", "Luke", "GETcase");
     test_case(connfd, "MOD Name Bssn", "SUCCESS", "MODcase");
     test_case(connfd, "GET Name", "Bssn", "GETcase");
-    test_case(connfd, "SET Name Luck", "SUCCESS", "SETcase");
-    test_case(connfd, "GET Name", "Luck", "GETcase");
+    test_case(connfd, "SET Name Lucky", "SUCCESS", "SETcase");
+    test_case(connfd, "GET Name", "Lucky", "GETcase");
     test_case(connfd, "DEL Name", "SUCCESS", "DELcase");
     test_case(connfd, "GET Name", "NO EXIST", "GETcase");
 }
 
 void array_testcase_10w(int connfd)
+{
+    int count = 100000;
+    int i = 0;
+    while (i++ < count)
+    {
+        array_testcase(connfd);
+    }
+}
+
+// 红黑树存储引擎测试
+void rbtree_testcase(int connfd)
+{
+    test_case(connfd, "RSET Name Luke", "SUCCESS", "RSETcase");
+    test_case(connfd, "RGET Name", "Luke", "RGETcase");
+    test_case(connfd, "RMOD Name Bssn", "SUCCESS", "RMODcase");
+    test_case(connfd, "RGET Name", "Bssn", "RGETcase");
+    test_case(connfd, "RSET Name Lucky", "SUCCESS", "RSETcase");
+    test_case(connfd, "RGET Name", "Lucky", "RGETcase");
+    test_case(connfd, "RDEL Name", "SUCCESS", "RDELcase");
+    test_case(connfd, "RGET Name", "NO EXIST", "RGETcase");
+}
+
+void rbtree_testcase_10w(int connfd)
 {
     int count = 100000;
     int i = 0;
@@ -134,19 +158,35 @@ int main(int argc, char *argv[])
 
     int connfd = connect_tcpserver(ip, port);
 
+    /* 数组引擎测试 ./testcase -s 10.211.55.21 -p 9096 -m 1 */
     if (mode & 0x1)
     {
+        printf("Array Test:\n");
         struct timeval tv_begin;
         gettimeofday(&tv_begin, NULL);
-
         array_testcase_10w(connfd);
-        // array_testcase_100w(connfd);
-
         struct timeval tv_end;
         gettimeofday(&tv_end, NULL);
-
         int time_used = TIME_SUB_MS(tv_end, tv_begin);
-        printf("80W: time_used: %d, qps: %d\n", time_used, 800000 * 1000 / time_used);
+        printf("Array KVEngine 80W: time_used: %d, qps: %d\n", time_used, 800000 * 1000 / time_used);
+
+        gettimeofday(&tv_begin, NULL);
+        rbtree_testcase_10w(connfd);
+        gettimeofday(&tv_end, NULL);
+        time_used = TIME_SUB_MS(tv_end, tv_begin);
+        printf("RBTREE KVEngine 80W: time_used: %d, qps: %d\n", time_used, 800000 * 1000 / time_used);
+    }
+    /* 红黑树引擎测试 ./testcase -s 10.211.55.21 -p 9096 -m 2 */
+    if (mode & 0x2)
+    {
+        printf("RBTree Test:\n");
+        struct timeval tv_begin;
+        gettimeofday(&tv_begin, NULL);
+        rbtree_testcase_10w(connfd);
+        struct timeval tv_end;
+        gettimeofday(&tv_end, NULL);
+        int time_used = TIME_SUB_MS(tv_end, tv_begin);
+        printf("RBTREE KVEngine 80W: time_used: %d, qps: %d\n", time_used, 800000 * 1000 / time_used);
     }
 
     return 0;

@@ -91,17 +91,17 @@ int main()
 #elif 1
 
     char *msg[] = {"SET key setVal", "GET key", "MOD key modVal", "GET key", "SET key setVal2", "GET key", "DEL key", "GET key"};
+    char *rbtree_msg[] = {"RSET key setVal", "RGET key", "RMOD key modVal", "RGET key", "RSET key setVal2", "RGET key", "RDEL key", "RGET key"};
 
     for (int i = 0; i < 8; i++)
     {
-        if (send(sockfd, msg[i], strlen(msg[i]), 0) == -1)
+        if (send(sockfd, rbtree_msg[i], strlen(rbtree_msg[i]), 0) == -1)
         {
             perror("send");
             close(sockfd);
         }
         sleep(1);
     }
-
 
 #endif
 
