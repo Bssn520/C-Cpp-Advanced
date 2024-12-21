@@ -10,7 +10,6 @@
 <0      ERROR
 
 NULL    ERROR | NOT EXIST
-
 */
 
 struct kvs_array_item array_table[KVS_ARRAY_SIZE];
@@ -129,4 +128,9 @@ int kvstore_array_mod(char *key, char *newValue)
     tmp = NULL;
 
     return 0;
+}
+
+int kvstore_array_count(void)
+{
+    return array_index;
 }
