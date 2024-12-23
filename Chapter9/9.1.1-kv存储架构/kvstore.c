@@ -42,33 +42,68 @@ void kvstore_free(void *ptr)
     }
 }
 
+// 开启红黑树适配层接口
 #if ENABLE_RBTREE_KVENGINE
-
+int kvstore_rbtree_create(rbtree_t *tree)
+{
+    return rbtree_create(&Tree);
+}
+void kvstore_rbtree_destroy(rbtree_t *tree)
+{
+    return rbtree_destroy(&Tree);
+}
 int kvstore_rbtree_set(char *key, char *value)
 {
-    return rbtree_set(&tree, key, value);
+    return rbtree_set(&Tree, key, value);
 }
-
 char *kvstore_rbtree_get(char *key)
 {
-    return rbtree_get(&tree, key);
+    return rbtree_get(&Tree, key);
 }
-
 int kvstore_rbtree_del(char *key)
 {
-    return rbtree_del(&tree, key);
+    return rbtree_del(&Tree, key);
 }
-
 int kvstore_rbtree_mod(char *key, char *value)
 {
-    return rbtree_mod(&tree, key, value);
+    return rbtree_mod(&Tree, key, value);
 }
-
 int kvstore_rbtree_count(void)
 {
-    return rbtree_count(&tree);
+    return rbtree_count(&Tree);
 }
+#endif
 
+// 开启数组适配层接口
+#if ENABLE_ARRAY_KVENGINE
+int kvstore_array_create(array_t *arr)
+{
+    return array_create(&Array);
+}
+void kvstore_array_destroy(array_t *arr)
+{
+    return array_destroy(&Array);
+}
+int kvstore_array_set(char *key, char *value)
+{
+    return array_set(&Array, key, value);
+}
+char *kvstore_array_get(char *key)
+{
+    return array_get(&Array, key);
+}
+int kvstore_array_del(char *key)
+{
+    return array_del(&Array, key);
+}
+int kvstore_array_mod(char *key, char *newValue)
+{
+    return array_mod(&Array, key, newValue);
+}
+int kvstore_array_count(void)
+{
+    return array_count(&Array);
+}
 #endif
 
 // 用于分割提取发来的数据，如 SET KEY VALUE
@@ -299,23 +334,38 @@ int kvstore_request(connection_t *item)
     return 0;
 }
 
+// 初始化存储引擎
 int init_kvengine(void)
 {
 #if ENABLE_ARRAY_KVENGINE
+    kvstore_array_create(&Array);
 #endif
 
 #if ENABLE_RBTREE_KVENGINE
-    int ret = rbtree_create(&tree);
+    int ret = rbtree_create(&Tree);
     if (ret == 0)
         return 0;
 #endif
     LOG("Error: 未启用任何存储引擎\n");
     return -1;
 }
+// 退出存储引擎
+int exit_kvengine(void)
+{
+#if ENABLE_ARRAY_KVENGINE
+    kvstore_array_destroy(&Array);
+#endif
+
+#if ENABLE_RBTREE_KVENGINE
+    kvstore_rbtree_destroy(&Tree);
+#endif
+    LOG("引擎已退出\n");
+    return 0;
+}
 
 int main(int argc, const char **argv)
 {
-    // 存储组件
+    // 初始化存储引擎
     init_kvengine();
 
 // 网络组件
@@ -325,6 +375,9 @@ int main(int argc, const char **argv)
     ntyco_entry();
 #elif (ENABLE_NETWORK_SELECT == NETWORK_IOURING)
 #endif
+
+    // 退出存储引擎
+    exit_kvengine();
 
     return 0;
 }

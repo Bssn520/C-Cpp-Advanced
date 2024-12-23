@@ -404,7 +404,7 @@ void rbtree_traversal(rbtree *T, rbtree_node *node)
 }
 
 /* 为 KVstore 适配接口 */
-rbtree_t tree;
+rbtree_t Tree;
 // 创建一棵红黑树，成功返回 tree， 失败返回 -1
 int rbtree_create(rbtree_t *tree)
 {

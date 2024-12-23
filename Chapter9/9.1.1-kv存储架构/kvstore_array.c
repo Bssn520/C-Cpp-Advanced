@@ -12,16 +12,41 @@
 NULL    ERROR | NOT EXIST
 */
 
-struct kvs_array_item array_table[KVS_ARRAY_SIZE];
+array_t Array;
 
-int array_index = 0;
+int array_create(array_t *arr)
+{
+    if (arr)
+    {
+        arr->array_table = kvstore_malloc(sizeof(struct kvs_array_item) * KVS_ARRAY_SIZE);
+        if (arr->array_table)
+        {
+            memset(arr->array_table, 0, sizeof(struct kvs_array_item) * KVS_ARRAY_SIZE);
+            arr->array_index = 0;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+void array_destroy(array_t *arr)
+{
+    if (!arr)
+        return;
+
+    if (!arr->array_table)
+        kvstore_free(arr->array_table);
+}
 
 // 判断 key 是否已经存在。返回值： 如果存在，返回的是 key 的索引；如果不存在， 返回-1 。
-int kvstore_key_exist(char *key)
+static int key_exist(array_t *arr, char *key)
 {
-    for (int i = 0; i < array_index; i++)
+    if (arr == NULL)
+        return -1;
+
+    for (int i = 0; i < arr->array_index; i++)
     {
-        if (strcmp(array_table[i].key, key) == 0)
+        if (strcmp(arr->array_table[i].key, key) == 0)
             return i;
     }
 
@@ -29,16 +54,16 @@ int kvstore_key_exist(char *key)
 }
 
 // SET 方法对应的操作
-int kvstore_array_set(char *key, char *value)
+int array_set(array_t *arr, char *key, char *value)
 {
-    if (key == NULL || value == NULL || array_index == KVS_ARRAY_SIZE)
+    if (arr == NULL || key == NULL || value == NULL || arr->array_index == KVS_ARRAY_SIZE)
         return -1;
 
     // 如果 key 已经存在
-    if (kvstore_key_exist(key) != -1)
+    if (key_exist(arr, key) != -1)
     {
         LOG("kvstore_array_set: key exist already, update key to new value\n\n");
-        kvstore_array_mod(key, value);
+        array_mod(arr, key, value);
         return 0;
     }
 
@@ -57,62 +82,67 @@ int kvstore_array_set(char *key, char *value)
     }
     strncpy(vcopy, value, strlen(value) + 1);
 
-    array_table[array_index].key = kcopy;
-    array_table[array_index].value = vcopy;
+    arr->array_table[arr->array_index].key = kcopy;
+    arr->array_table[arr->array_index].value = vcopy;
 
-    array_index++;
+    arr->array_index++;
 
     return 0;
 }
 
 // GET 方法对应的操作
-char *kvstore_array_get(char *key)
+char *array_get(array_t *arr, char *key)
 {
-    if (key == NULL)
+    if (arr == NULL || key == NULL)
         return NULL;
 
-    int i = kvstore_key_exist(key);
+    int i = key_exist(arr, key);
     if (i == -1) // 如果 key 不存在
         return NULL;
 
     // 如果 key 存在，则返回对应的 value
-    return array_table[i].value;
+    return arr->array_table[i].value;
 }
 
 // DEL 方法对应的操作
-int kvstore_array_del(char *key)
+int array_del(array_t *arr, char *key)
 {
     if (key == NULL)
         return -1;
 
-    int i = kvstore_key_exist(key);
+    int i = key_exist(arr, key);
     if (i == -1) // 如果 key 不存在
-        return 1;
+        return -1;
 
     // 如果 key 存在
-    kvstore_free(array_table[i].key);
-    kvstore_free(array_table[i].value);
-    array_table[i].key = NULL;
-    array_table[i].value = NULL;
+    kvstore_free(arr->array_table[i].key);
+    kvstore_free(arr->array_table[i].value);
+    arr->array_table[i].key = NULL;
+    arr->array_table[i].value = NULL;
 
-    array_index--;
+    // 将后续的元素向前移动
+    for (int j = i; j < arr->array_index - 1; j++)
+    {
+        arr->array_table[j] = arr->array_table[j + 1];
+    }
+    arr->array_index--;
 
     return 0;
 }
 
 // MOD 方法对应的操作
-int kvstore_array_mod(char *key, char *newValue)
+int array_mod(array_t *arr, char *key, char *newValue)
 {
-    if (key == NULL)
+    if (key == NULL || arr == NULL)
         return -1;
 
-    int i = kvstore_key_exist(key);
+    int i = key_exist(arr, key);
 
     if (i == -1) // 如果 key 不存在
         return 1;
 
     // 如果 key 存在
-    char *tmp = array_table[i].value;
+    char *tmp = arr->array_table[i].value;
 
     char *vcopy = kvstore_malloc(strlen(newValue) + 1);
     if (vcopy == NULL)
@@ -122,7 +152,7 @@ int kvstore_array_mod(char *key, char *newValue)
     }
 
     strncpy(vcopy, newValue, strlen(newValue) + 1);
-    array_table[i].value = vcopy;
+    arr->array_table[i].value = vcopy;
 
     kvstore_free(tmp);
     tmp = NULL;
@@ -130,7 +160,7 @@ int kvstore_array_mod(char *key, char *newValue)
     return 0;
 }
 
-int kvstore_array_count(void)
+int array_count(array_t *arr)
 {
-    return array_index;
+    return arr->array_index;
 }

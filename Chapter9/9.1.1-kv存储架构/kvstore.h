@@ -54,30 +54,44 @@ int kvstore_request(connection_t *item);
 
 
 /* 基础存储组件 */
-// 数组引擎对应的CURD接口
-int kvstore_array_set(char *key, char *value);
-char *kvstore_array_get(char *key);
-int kvstore_array_del(char *key);
-int kvstore_array_mod(char *key, char *value);
-int kvstore_array_count(void);
 // 使用 数组 作为KV存储的数据结构
 #if ENABLE_ARRAY_KVENGINE
+
 #define KVS_ARRAY_SIZE 1024
 struct kvs_array_item
 {
     char *key;
     char *value;
 };
+
+typedef struct array_s
+{
+    struct kvs_array_item *array_table;
+    int array_index;
+} array_t;
+extern array_t Array;
+
+// 数组引擎对应的CURD接口
+int array_create(array_t *arr);
+void array_destroy(array_t *arr);
+int array_set(array_t *arr, char *key, char *value);
+char *array_get(array_t *arr, char *key);
+int array_del(array_t *arr, char *key);
+int array_mod(array_t *arr, char *key, char *value);
+int array_count(array_t *arr);
+
 #endif
 
 // 红黑树引擎对应的CURD接口
 #if ENABLE_RBTREE_KVENGINE
 
 typedef struct _rbtree rbtree_t;
-extern rbtree_t tree;
+extern rbtree_t Tree;
 
 // 初始化红黑树
 int rbtree_create(rbtree_t *tree);
+// 析构红黑树
+void rbtree_destroy(rbtree_t *tree);
 // 以红黑树为数据结构的 SET 方法；操作成功返回 0，否则返回 -1
 int rbtree_set(rbtree_t *tree, char *key, char *value);
 // 以红黑树为数据结构的 GET 方法；操作成功返回 value，否则返回 NULL
