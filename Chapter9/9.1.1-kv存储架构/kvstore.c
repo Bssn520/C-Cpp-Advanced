@@ -11,30 +11,27 @@
 
 // 定义协议中使用的命令
 const char *commands[] = {
-    "SET", "GET", "DEL", "MOD", "COUNT", "EXIST",
-    "RSET", "RGET", "RDEL", "RMOD", "RCOUNT", "REXIST",
-    "HSET", "HGET", "HDEL", "HMOD", "HCOUNT", "HEXIST"};
+    "SET", "GET", "DEL", "COUNT", "EXIST",
+    "RSET", "RGET", "RDEL", "RCOUNT", "REXIST",
+    "HSET", "HGET", "HDEL", "HCOUNT", "HEXIST"};
 enum
 {
     KVS_CMD_START = 0,
     KVS_CMD_SET = KVS_CMD_START,
     KVS_CMD_GET,
     KVS_CMD_DEL,
-    KVS_CMD_MOD,
     KVS_CMD_COUNT,
     KVS_CMD_EXIST,
 
     KVS_CMD_RSET,
     KVS_CMD_RGET,
     KVS_CMD_RDEL,
-    KVS_CMD_RMOD,
     KVS_CMD_RCOUNT,
     KVS_CMD_REXIST,
 
     KVS_CMD_HSET,
     KVS_CMD_HGET,
     KVS_CMD_HDEL,
-    KVS_CMD_HMOD,
     KVS_CMD_HCOUNT,
     KVS_CMD_HEXIST,
     KVS_CMD_END
@@ -79,10 +76,6 @@ int kvstore_array_del(char *key)
 {
     return array_del(&Array, key);
 }
-int kvstore_array_mod(char *key, char *newValue)
-{
-    return array_mod(&Array, key, newValue);
-}
 int kvstore_array_count(void)
 {
     return array_count(&Array);
@@ -114,10 +107,6 @@ int kvstore_rbtree_del(char *key)
 {
     return rbtree_del(&Tree, key);
 }
-int kvstore_rbtree_mod(char *key, char *value)
-{
-    return rbtree_mod(&Tree, key, value);
-}
 int kvstore_rbtree_count(void)
 {
     return rbtree_count(&Tree);
@@ -148,10 +137,6 @@ char *kvstore_hash_get(char *key)
 int kvstore_hash_del(char *key)
 {
     return delete_kv_hashtable(&Hash, key);
-}
-int kvstore_hash_mod(char *key, char *newValue)
-{
-    return mod_kv_hashtable(&Hash, key, newValue);
 }
 int kvstore_hash_count(void)
 {
@@ -201,10 +186,10 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         int ret = kvstore_array_set(tokens[1], tokens[2]);
         if (ret == 0)
         {
-            LOG("--- SET: %d ---\n\n", ret);
+            LOG("--- SET ---\n\n");
             snprintf(msg, BUFFER_LENGTH, "SUCCESS");
         }
-        else if (ret < 0)
+        else
         {
             LOG("--- ERROR ---\n\n");
             snprintf(msg, BUFFER_LENGTH, "ERROR");
@@ -213,11 +198,20 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
     }
     case KVS_CMD_GET:
     {
-        char *value = kvstore_array_get(tokens[1]);
-        if (value)
+        int ret = kvstore_array_exist(tokens[1]);
+        if (ret >= 0)
         {
-            LOG("---The value of %s is %s ---\n\n", tokens[1], value);
-            snprintf(msg, BUFFER_LENGTH, "%s", value);
+            char *value = kvstore_array_get(tokens[1]);
+            if (value)
+            {
+                LOG("---The value of %s is %s ---\n\n", tokens[1], value);
+                snprintf(msg, BUFFER_LENGTH, "%s", value);
+            }
+            else
+            {
+                LOG("--- ERROR ---\n\n");
+                snprintf(msg, BUFFER_LENGTH, "ERROR");
+            }
         }
         else
         {
@@ -228,41 +222,24 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
     }
     case KVS_CMD_DEL:
     {
-        int ret = kvstore_array_del(tokens[1]);
-        if (ret == 0)
+        int ret = kvstore_array_exist(tokens[1]);
+        if (ret >= 0)
         {
-            LOG("--- DEL %d ---\n\n", ret);
-            snprintf(msg, BUFFER_LENGTH, "SUCCESS");
-        }
-        else if (ret > 0)
-        {
-            LOG("--- NO EXIST ---\n\n");
-            snprintf(msg, BUFFER_LENGTH, "NO EXIST");
-        }
-        else
-        {
-            LOG("--- ERROR ---\n\n");
-            snprintf(msg, BUFFER_LENGTH, "ERROR");
-        }
-        break;
-    }
-    case KVS_CMD_MOD:
-    {
-        int ret = kvstore_array_mod(tokens[1], tokens[2]);
-        if (ret == 0)
-        {
-            LOG("--- MOD %d ---\n\n", ret);
-            snprintf(msg, BUFFER_LENGTH, "SUCCESS");
-        }
-        else if (ret > 0)
-        {
-            LOG("--- NO EXIST ---\n\n");
-            snprintf(msg, BUFFER_LENGTH, "NO EXIST");
+            if (kvstore_array_del(tokens[1]) == 0)
+            {
+                LOG("--- DEL ---\n\n");
+                snprintf(msg, BUFFER_LENGTH, "SUCCESS");
+            }
+            else
+            {
+                LOG("--- ERROR ---\n\n");
+                snprintf(msg, BUFFER_LENGTH, "ERROR");
+            }
         }
         else
         {
-            LOG("--- ERROR ---\n\n");
-            snprintf(msg, BUFFER_LENGTH, "ERROR");
+            LOG("--- NO EXIST ---\n\n");
+            snprintf(msg, BUFFER_LENGTH, "NO EXIST");
         }
         break;
     }
@@ -303,23 +280,8 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         int ret = kvstore_rbtree_set(tokens[1], tokens[2]);
         if (ret == 0)
         {
-            LOG("--- RSET: %d ---\n\n", ret);
+            LOG("--- RSET ---\n\n");
             snprintf(msg, BUFFER_LENGTH, "SUCCESS");
-        }
-        else if (ret == -1)
-        {
-            LOG("--- ERROR ---\n\n");
-            snprintf(msg, BUFFER_LENGTH, "ERROR");
-        }
-        break;
-    }
-    case KVS_CMD_RGET:
-    {
-        char *value = kvstore_rbtree_get(tokens[1]);
-        if (value)
-        {
-            LOG("---The value of %s is %s ---\n\n", tokens[1], value);
-            snprintf(msg, BUFFER_LENGTH, "%s", value);
         }
         else
         {
@@ -328,30 +290,47 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         }
         break;
     }
-    case KVS_CMD_RDEL:
+    case KVS_CMD_RGET:
     {
-        int ret = kvstore_rbtree_del(tokens[1]);
-        if (ret == 0)
+        int ret = kvstore_rbtree_exist(tokens[1]);
+        if (ret >= 0)
         {
-            LOG("--- RDEL %d ---\n\n", ret);
-            snprintf(msg, BUFFER_LENGTH, "SUCCESS");
+            char *value = kvstore_rbtree_get(tokens[1]);
+            if (value)
+            {
+                LOG("---The value of %s is %s ---\n\n", tokens[1], value);
+                snprintf(msg, BUFFER_LENGTH, "%s", value);
+            }
+            else
+            {
+                LOG("--- ERROR ---\n\n");
+                snprintf(msg, BUFFER_LENGTH, "ERROR");
+            }
         }
-        else if (ret == -1)
+        else
         {
-            LOG("--- ERROR ---\n\n");
-            snprintf(msg, BUFFER_LENGTH, "ERROR");
+            LOG("--- NO EXIST ---\n\n");
+            snprintf(msg, BUFFER_LENGTH, "NO EXIST");
         }
         break;
     }
-    case KVS_CMD_RMOD:
+    case KVS_CMD_RDEL:
     {
-        int ret = kvstore_rbtree_mod(tokens[1], tokens[2]);
-        if (ret == 0)
+        int ret = kvstore_rbtree_exist(tokens[1]);
+        if (ret >= 0)
         {
-            LOG("--- RMOD %d ---\n\n", ret);
-            snprintf(msg, BUFFER_LENGTH, "SUCCESS");
+            if (kvstore_rbtree_del(tokens[1]) == 0)
+            {
+                LOG("--- RDEL ---\n\n");
+                snprintf(msg, BUFFER_LENGTH, "SUCCESS");
+            }
+            else
+            {
+                LOG("--- ERROR ---\n\n");
+                snprintf(msg, BUFFER_LENGTH, "ERROR");
+            }
         }
-        else if (ret == -1)
+        else
         {
             LOG("--- NO EXIST ---\n\n");
             snprintf(msg, BUFFER_LENGTH, "NO EXIST");
@@ -395,23 +374,8 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         int ret = kvstore_hash_set(tokens[1], tokens[2]);
         if (ret == 0)
         {
-            LOG("--- HSET: %d ---\n\n", ret);
+            LOG("--- HSET ---\n\n");
             snprintf(msg, BUFFER_LENGTH, "SUCCESS");
-        }
-        else if (ret == -1)
-        {
-            LOG("--- ERROR ---\n\n");
-            snprintf(msg, BUFFER_LENGTH, "ERROR");
-        }
-        break;
-    }
-    case KVS_CMD_HGET:
-    {
-        char *value = kvstore_hash_get(tokens[1]);
-        if (value)
-        {
-            LOG("---The value of %s is %s ---\n\n", tokens[1], value);
-            snprintf(msg, BUFFER_LENGTH, "%s", value);
         }
         else
         {
@@ -420,30 +384,47 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         }
         break;
     }
-    case KVS_CMD_HDEL:
+    case KVS_CMD_HGET:
     {
-        int ret = kvstore_hash_del(tokens[1]);
-        if (ret == 0)
+        int ret = kvstore_hash_exist(tokens[1]);
+        if (ret >= 0)
         {
-            LOG("--- HDEL %d ---\n\n", ret);
-            snprintf(msg, BUFFER_LENGTH, "SUCCESS");
+            char *value = kvstore_hash_get(tokens[1]);
+            if (value)
+            {
+                LOG("---The value of %s is %s ---\n\n", tokens[1], value);
+                snprintf(msg, BUFFER_LENGTH, "%s", value);
+            }
+            else
+            {
+                LOG("--- ERROR ---\n\n");
+                snprintf(msg, BUFFER_LENGTH, "ERROR");
+            }
         }
-        else if (ret == -1)
+        else
         {
-            LOG("--- ERROR ---\n\n");
-            snprintf(msg, BUFFER_LENGTH, "ERROR");
+            LOG("--- NO EXIST ---\n\n");
+            snprintf(msg, BUFFER_LENGTH, "NO EXIST");
         }
         break;
     }
-    case KVS_CMD_HMOD:
+    case KVS_CMD_HDEL:
     {
-        int ret = kvstore_hash_mod(tokens[1], tokens[2]);
-        if (ret == 0)
+        int ret = kvstore_hash_exist(tokens[1]);
+        if (ret >= 0)
         {
-            LOG("--- HMOD %d ---\n\n", ret);
-            snprintf(msg, BUFFER_LENGTH, "SUCCESS");
+            if (kvstore_hash_del(tokens[1]) == 0)
+            {
+                LOG("--- HDEL ---\n\n");
+                snprintf(msg, BUFFER_LENGTH, "SUCCESS");
+            }
+            else
+            {
+                LOG("--- ERROR ---\n\n");
+                snprintf(msg, BUFFER_LENGTH, "ERROR");
+            }
         }
-        else if (ret == -1)
+        else
         {
             LOG("--- NO EXIST ---\n\n");
             snprintf(msg, BUFFER_LENGTH, "NO EXIST");
@@ -482,8 +463,8 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
     }
     default:
     {
-        LOG("CMD: %s 无匹配\n\n", commands[cmd]);
-        // assert(0);
+        LOG("CMD: %s NO MATCH\n\n", commands[cmd]);
+        snprintf(msg, BUFFER_LENGTH, "NO MATCH");
     }
     }
     return 0;

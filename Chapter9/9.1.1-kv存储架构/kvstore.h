@@ -78,7 +78,6 @@ int array_exist(array_t *arr, char *key);
 int array_set(array_t *arr, char *key, char *value);
 char *array_get(array_t *arr, char *key);
 int array_del(array_t *arr, char *key);
-int array_mod(array_t *arr, char *key, char *value);
 int array_count(array_t *arr);
 #endif
 
@@ -99,8 +98,6 @@ int rbtree_set(rbtree_t *tree, char *key, char *value);
 char *rbtree_get(rbtree_t *tree, char *key);
 // 以红黑树为数据结构的 DEL 方法；操作成功返回 0，否则返回 -1
 int rbtree_del(rbtree_t *tree, char *key);
-// 以红黑树为数据结构的 MOD 方法；操作成功返回 0，否则返回 -1
-int rbtree_mod(rbtree_t *tree, char *key, char *newValue);
 // 以红黑树为数据结构的 COUNT 方法；操作成功返回 红黑树的节点数量
 int rbtree_count(rbtree_t *tree);
 #endif
@@ -119,7 +116,6 @@ int kv_exist(hashtable_t *hash, char *key);
 int put_kv_hashtable(hashtable_t *hash, char *key, char *value);
 char *get_kv_hashtable(hashtable_t *hash, char *key);
 int delete_kv_hashtable(hashtable_t *hash, char *key);
-int mod_kv_hashtable(hashtable_t *hash, char *key, char *value);
 int count_hashtable(hashtable_t *hash);
 
 #endif
