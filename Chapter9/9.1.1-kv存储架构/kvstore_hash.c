@@ -256,13 +256,19 @@ int delete_kv_hashtable(hashtable_t *hash, char *key)
     return 0;
 }
 
+/**
+ * @description: 判断 key 在 HashTable 中是否存在。
+ * @param {hashtable_t} *hash
+ * @param {char} *key
+ * @return {*} 如果存在则返回 0；否则返回 -1
+ */
 int kv_exist(hashtable_t *hash, char *key)
 {
     char *value = get_kv_hashtable(hash, key);
     if (value)
-        return 1;
-    else
         return 0;
+
+    return -1;
 }
 
 int mod_kv_hashtable(hashtable_t *hash, char *key, char *value)

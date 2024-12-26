@@ -450,6 +450,23 @@ void rbtree_destroy(rbtree_t *tree)
     }
 }
 
+/**
+ * @description: 判断 key 在红黑树中是否存在。
+ * @param {rbtree_t} *tree
+ * @param {char} *key
+ * @return {*} 如果存在则返回 0；否则返回 -1
+ */
+int rbtree_exist(rbtree_t *tree, char *key)
+{
+    // 搜索确定 key 是否存在
+    rbtree_node *node_search = rbtree_search(tree, key);
+
+    if (node_search != tree->nil)
+        return 0;
+
+    return -1;
+}
+
 // 以红黑树为数据结构的 SET 方法；操作成功返回 0，否则返回 -1
 int rbtree_set(rbtree_t *tree, char *key, char *value)
 {

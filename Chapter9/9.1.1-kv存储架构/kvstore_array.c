@@ -38,8 +38,13 @@ void array_destroy(array_t *arr)
         kvstore_free(arr->array_table);
 }
 
-// 判断 key 是否已经存在。返回值： 如果存在，返回的是 key 的索引；如果不存在， 返回-1 。
-static int key_exist(array_t *arr, char *key)
+/**
+ * @description: 判断 key 在数组中是否存在。
+ * @param {array_t} *arr
+ * @param {char} *key
+ * @return {*} 如果存在则返回 key 在数组内的索引(>=0)，否则返回 -1
+ */
+int array_exist(array_t *arr, char *key)
 {
     if (arr == NULL)
         return -1;
@@ -49,7 +54,6 @@ static int key_exist(array_t *arr, char *key)
         if (strcmp(arr->array_table[i].key, key) == 0)
             return i;
     }
-
     return -1;
 }
 
@@ -60,7 +64,7 @@ int array_set(array_t *arr, char *key, char *value)
         return -1;
 
     // 如果 key 已经存在
-    if (key_exist(arr, key) != -1)
+    if (array_exist(arr, key) != -1)
     {
         LOG("kvstore_array_set: key exist already, update key to new value\n\n");
         array_mod(arr, key, value);
@@ -96,7 +100,7 @@ char *array_get(array_t *arr, char *key)
     if (arr == NULL || key == NULL)
         return NULL;
 
-    int i = key_exist(arr, key);
+    int i = array_exist(arr, key);
     if (i == -1) // 如果 key 不存在
         return NULL;
 
@@ -110,7 +114,7 @@ int array_del(array_t *arr, char *key)
     if (key == NULL)
         return -1;
 
-    int i = key_exist(arr, key);
+    int i = array_exist(arr, key);
     if (i == -1) // 如果 key 不存在
         return -1;
 
@@ -136,7 +140,7 @@ int array_mod(array_t *arr, char *key, char *newValue)
     if (key == NULL || arr == NULL)
         return -1;
 
-    int i = key_exist(arr, key);
+    int i = array_exist(arr, key);
 
     if (i == -1) // 如果 key 不存在
         return 1;
