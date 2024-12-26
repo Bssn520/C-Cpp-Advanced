@@ -5,7 +5,7 @@
 
 /* KV存储使用的组件选择 */
 // 日志打印宏定义
-// #define ENABLE_LOG
+#define ENABLE_LOG
 #ifdef ENABLE_LOG
 #define LOG(_fmt, ...) fprintf(stdout, "[%s : %d]: " _fmt, __FILE__, __LINE__, ##__VA_ARGS__)
 #else
@@ -74,6 +74,7 @@ extern array_t Array;
 // 数组引擎对应的CURD接口
 int array_create(array_t *arr);
 void array_destroy(array_t *arr);
+int array_exist(array_t *arr, char *key);
 int array_set(array_t *arr, char *key, char *value);
 char *array_get(array_t *arr, char *key);
 int array_del(array_t *arr, char *key);
@@ -90,6 +91,8 @@ extern rbtree_t Tree;
 int rbtree_create(rbtree_t *tree);
 // 析构红黑树
 void rbtree_destroy(rbtree_t *tree);
+// 如果key 在红黑树中存在则返回 0；否则返回 -1
+int rbtree_exist(rbtree_t *tree, char *key);
 // 以红黑树为数据结构的 SET 方法；操作成功返回 0，否则返回 -1
 int rbtree_set(rbtree_t *tree, char *key, char *value);
 // 以红黑树为数据结构的 GET 方法；操作成功返回 value，否则返回 NULL
@@ -112,6 +115,7 @@ extern hashtable_t Hash;
 // 哈希引擎对应的CURD接口
 int create_hashtable(hashtable_t *hash);
 void destroy_hashtable(hashtable_t *hash);
+int kv_exist(hashtable_t *hash, char *key);
 int put_kv_hashtable(hashtable_t *hash, char *key, char *value);
 char *get_kv_hashtable(hashtable_t *hash, char *key);
 int delete_kv_hashtable(hashtable_t *hash, char *key);

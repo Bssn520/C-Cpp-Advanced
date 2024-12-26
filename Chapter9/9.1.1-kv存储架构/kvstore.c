@@ -11,9 +11,9 @@
 
 // 定义协议中使用的命令
 const char *commands[] = {
-    "SET", "GET", "DEL", "MOD", "COUNT",
-    "RSET", "RGET", "RDEL", "RMOD", "RCOUNT",
-    "HSET", "HGET", "HDEL", "HMOD", "HCOUNT"};
+    "SET", "GET", "DEL", "MOD", "COUNT", "EXIST",
+    "RSET", "RGET", "RDEL", "RMOD", "RCOUNT", "REXIST",
+    "HSET", "HGET", "HDEL", "HMOD", "HCOUNT", "HEXIST"};
 enum
 {
     KVS_CMD_START = 0,
@@ -22,18 +22,21 @@ enum
     KVS_CMD_DEL,
     KVS_CMD_MOD,
     KVS_CMD_COUNT,
+    KVS_CMD_EXIST,
 
     KVS_CMD_RSET,
     KVS_CMD_RGET,
     KVS_CMD_RDEL,
     KVS_CMD_RMOD,
     KVS_CMD_RCOUNT,
+    KVS_CMD_REXIST,
 
     KVS_CMD_HSET,
     KVS_CMD_HGET,
     KVS_CMD_HDEL,
     KVS_CMD_HMOD,
     KVS_CMD_HCOUNT,
+    KVS_CMD_HEXIST,
     KVS_CMD_END
 };
 
@@ -50,37 +53,6 @@ void kvstore_free(void *ptr)
     }
 }
 
-/* ------------------------ RBTREE ------------------------ */
-#if ENABLE_RBTREE_KVENGINE
-int kvstore_rbtree_create(rbtree_t *tree)
-{
-    return rbtree_create(&Tree);
-}
-void kvstore_rbtree_destroy(rbtree_t *tree)
-{
-    return rbtree_destroy(&Tree);
-}
-int kvstore_rbtree_set(char *key, char *value)
-{
-    return rbtree_set(&Tree, key, value);
-}
-char *kvstore_rbtree_get(char *key)
-{
-    return rbtree_get(&Tree, key);
-}
-int kvstore_rbtree_del(char *key)
-{
-    return rbtree_del(&Tree, key);
-}
-int kvstore_rbtree_mod(char *key, char *value)
-{
-    return rbtree_mod(&Tree, key, value);
-}
-int kvstore_rbtree_count(void)
-{
-    return rbtree_count(&Tree);
-}
-#endif
 /* ------------------------ ARRAY ------------------------ */
 #if ENABLE_ARRAY_KVENGINE
 int kvstore_array_create(array_t *arr)
@@ -90,6 +62,10 @@ int kvstore_array_create(array_t *arr)
 void kvstore_array_destroy(array_t *arr)
 {
     return array_destroy(arr);
+}
+int kvstore_array_exist(char *key)
+{
+    return array_exist(&Array, key);
 }
 int kvstore_array_set(char *key, char *value)
 {
@@ -112,6 +88,41 @@ int kvstore_array_count(void)
     return array_count(&Array);
 }
 #endif
+/* ------------------------ RBTREE ------------------------ */
+#if ENABLE_RBTREE_KVENGINE
+int kvstore_rbtree_create(rbtree_t *tree)
+{
+    return rbtree_create(&Tree);
+}
+void kvstore_rbtree_destroy(rbtree_t *tree)
+{
+    return rbtree_destroy(&Tree);
+}
+int kvstore_rbtree_exist(char *key)
+{
+    return rbtree_exist(&Tree, key);
+}
+int kvstore_rbtree_set(char *key, char *value)
+{
+    return rbtree_set(&Tree, key, value);
+}
+char *kvstore_rbtree_get(char *key)
+{
+    return rbtree_get(&Tree, key);
+}
+int kvstore_rbtree_del(char *key)
+{
+    return rbtree_del(&Tree, key);
+}
+int kvstore_rbtree_mod(char *key, char *value)
+{
+    return rbtree_mod(&Tree, key, value);
+}
+int kvstore_rbtree_count(void)
+{
+    return rbtree_count(&Tree);
+}
+#endif
 /* ------------------------ HASH ------------------------ */
 #if ENABLE_HASH_KVENGINE
 int kvstore_hash_create(hashtable_t *hash)
@@ -121,6 +132,10 @@ int kvstore_hash_create(hashtable_t *hash)
 void kvstore_hash_destroy(hashtable_t *hash)
 {
     return destroy_hashtable(hash);
+}
+int kvstore_hash_exist(char *key)
+{
+    return kv_exist(&Hash, key);
 }
 int kvstore_hash_set(char *key, char *value)
 {
@@ -251,6 +266,21 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         }
         break;
     }
+    case KVS_CMD_EXIST:
+    {
+        int ret = kvstore_array_exist(tokens[1]);
+        if (ret >= 0)
+        {
+            LOG("--- EXIST %d ---\n\n", ret);
+            snprintf(msg, BUFFER_LENGTH, "EXISTED");
+        }
+        else
+        {
+            LOG("--- NO EXIST ---\n\n");
+            snprintf(msg, BUFFER_LENGTH, "NO EXIST");
+        }
+        break;
+    }
     case KVS_CMD_COUNT:
     {
         int ret = kvstore_array_count();
@@ -322,6 +352,21 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
             snprintf(msg, BUFFER_LENGTH, "SUCCESS");
         }
         else if (ret == -1)
+        {
+            LOG("--- NO EXIST ---\n\n");
+            snprintf(msg, BUFFER_LENGTH, "NO EXIST");
+        }
+        break;
+    }
+    case KVS_CMD_REXIST:
+    {
+        int ret = kvstore_rbtree_exist(tokens[1]);
+        if (ret >= 0)
+        {
+            LOG("--- REXIST %d ---\n\n", ret);
+            snprintf(msg, BUFFER_LENGTH, "EXISTED");
+        }
+        else
         {
             LOG("--- NO EXIST ---\n\n");
             snprintf(msg, BUFFER_LENGTH, "NO EXIST");
@@ -405,6 +450,21 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         }
         break;
     }
+    case KVS_CMD_HEXIST:
+    {
+        int ret = kvstore_hash_exist(tokens[1]);
+        if (ret >= 0)
+        {
+            LOG("--- HEXIST %d ---\n\n", ret);
+            snprintf(msg, BUFFER_LENGTH, "EXISTED");
+        }
+        else
+        {
+            LOG("--- NO EXIST ---\n\n");
+            snprintf(msg, BUFFER_LENGTH, "NO EXIST");
+        }
+        break;
+    }
     case KVS_CMD_HCOUNT:
     {
         int ret = kvstore_hash_count();
@@ -426,7 +486,6 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         // assert(0);
     }
     }
-
     return 0;
 }
 
