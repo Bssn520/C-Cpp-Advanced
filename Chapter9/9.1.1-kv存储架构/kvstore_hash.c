@@ -125,11 +125,55 @@ void destroy_hashtable(hashtable_t *hash)
     kvstore_free(hash->nodes);
 }
 
-int put_kv_hashtable(hashtable_t *hash, char *key, char *value)
+/**
+ * @description: 判断 key 在 HashTable 中是否存在。
+ * @param {hashtable_t} *hash
+ * @param {char} *key
+ * @return {*} 如果存在则返回 0；否则返回 -1
+ */
+int kv_exist(hashtable_t *hash, char *key)
+{
+    char *value = get_kv_hashtable(hash, key);
+    if (value)
+        return 0;
+
+    return -1;
+}
+
+static int _mod_kv_hashtable(hashtable_t *hash, char *key, char *value)
 {
     if (!hash || !key || !value)
         return -1;
 
+    int idx = _hash(key, MAX_TABLE_SIZE);
+
+    hashnode_t *node = hash->nodes[idx];
+
+    while (node != NULL)
+    {
+        if (strcmp(node->key, key) == 0)
+        {
+            kvstore_free(node->value);
+
+            node->value = kvstore_malloc(strlen(value) + 1);
+            if (node->value)
+            {
+                strcpy(node->value, value);
+                return 0;
+            }
+            else
+                assert(0);
+        }
+        node = node->next;
+    }
+    return -1;
+}
+
+int put_kv_hashtable(hashtable_t *hash, char *key, char *value)
+{
+    if (!hash || !key || !value)
+        return -1;
+#if 0
     int idx = _hash(key, MAX_TABLE_SIZE);
 
     hashnode_t *node = hash->nodes[idx];
@@ -144,6 +188,27 @@ int put_kv_hashtable(hashtable_t *hash, char *key, char *value)
             return -1;
         }
         node = node->next;
+    }
+
+    // 如果 key 不存在，则创建新节点并添加到 hashtable
+    hashnode_t *new_node = _create_node(key, value);
+    new_node->next = hash->nodes[idx];
+    hash->nodes[idx] = new_node;
+
+    hash->count++;
+
+    return 0;
+#endif
+
+    int idx = _hash(key, MAX_TABLE_SIZE);
+
+    // 如果 key 已经存在
+    if (kv_exist(hash, key) != -1)
+    {
+        int ret = _mod_kv_hashtable(hash, key, value);
+        if (ret == 0)
+            return 0;
+        return -1;
     }
 
     // 如果 key 不存在，则创建新节点并添加到 hashtable
@@ -254,50 +319,6 @@ int delete_kv_hashtable(hashtable_t *hash, char *key)
     hash->count--;
 
     return 0;
-}
-
-/**
- * @description: 判断 key 在 HashTable 中是否存在。
- * @param {hashtable_t} *hash
- * @param {char} *key
- * @return {*} 如果存在则返回 0；否则返回 -1
- */
-int kv_exist(hashtable_t *hash, char *key)
-{
-    char *value = get_kv_hashtable(hash, key);
-    if (value)
-        return 0;
-
-    return -1;
-}
-
-int mod_kv_hashtable(hashtable_t *hash, char *key, char *value)
-{
-    if (!hash || !key || !value)
-        return -1;
-
-    int idx = _hash(key, MAX_TABLE_SIZE);
-
-    hashnode_t *node = hash->nodes[idx];
-
-    while (node != NULL)
-    {
-        if (strcmp(node->key, key) == 0)
-        {
-            kvstore_free(node->value);
-
-            node->value = kvstore_malloc(strlen(value) + 1);
-            if (node->value)
-            {
-                strcpy(node->value, value);
-                return 0;
-            }
-            else
-                assert(0);
-        }
-        node = node->next;
-    }
-    return -1;
 }
 
 int count_hashtable(hashtable_t *hash)

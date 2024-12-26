@@ -57,6 +57,36 @@ int array_exist(array_t *arr, char *key)
     return -1;
 }
 
+// MOD 方法对应的操作
+static int _array_mod(array_t *arr, char *key, char *newValue)
+{
+    if (key == NULL || arr == NULL)
+        return -1;
+
+    int i = array_exist(arr, key);
+
+    if (i == -1) // 如果 key 不存在
+        return 1;
+
+    // 如果 key 存在
+    char *tmp = arr->array_table[i].value;
+
+    char *vcopy = kvstore_malloc(strlen(newValue) + 1);
+    if (vcopy == NULL)
+    {
+        printf("kvstore_malloc: newValue\n");
+        return -1;
+    }
+
+    strncpy(vcopy, newValue, strlen(newValue) + 1);
+    arr->array_table[i].value = vcopy;
+
+    kvstore_free(tmp);
+    tmp = NULL;
+
+    return 0;
+}
+
 // SET 方法对应的操作
 int array_set(array_t *arr, char *key, char *value)
 {
@@ -67,7 +97,7 @@ int array_set(array_t *arr, char *key, char *value)
     if (array_exist(arr, key) != -1)
     {
         LOG("kvstore_array_set: key exist already, update key to new value\n\n");
-        array_mod(arr, key, value);
+        _array_mod(arr, key, value);
         return 0;
     }
 
@@ -130,36 +160,6 @@ int array_del(array_t *arr, char *key)
         arr->array_table[j] = arr->array_table[j + 1];
     }
     arr->array_index--;
-
-    return 0;
-}
-
-// MOD 方法对应的操作
-int array_mod(array_t *arr, char *key, char *newValue)
-{
-    if (key == NULL || arr == NULL)
-        return -1;
-
-    int i = array_exist(arr, key);
-
-    if (i == -1) // 如果 key 不存在
-        return 1;
-
-    // 如果 key 存在
-    char *tmp = arr->array_table[i].value;
-
-    char *vcopy = kvstore_malloc(strlen(newValue) + 1);
-    if (vcopy == NULL)
-    {
-        printf("kvstore_malloc: newValue\n");
-        return -1;
-    }
-
-    strncpy(vcopy, newValue, strlen(newValue) + 1);
-    arr->array_table[i].value = vcopy;
-
-    kvstore_free(tmp);
-    tmp = NULL;
 
     return 0;
 }

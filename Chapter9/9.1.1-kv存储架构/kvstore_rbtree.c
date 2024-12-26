@@ -467,21 +467,38 @@ int rbtree_exist(rbtree_t *tree, char *key)
     return -1;
 }
 
+// 以红黑树为数据结构的 MOD 方法；操作成功返回 0，否则返回 -1
+static int _rbtree_mod(rbtree_t *tree, char *key, char *newValue)
+{
+    if (rbtree_exist(tree, key) == -1)
+        return -1;
+
+    rbtree_node *node = rbtree_search(tree, key);
+    node->value = kvstore_malloc(strlen(newValue) + 1);
+    if (node->value == NULL)
+    {
+        return -1;
+    }
+    strcpy(node->value, newValue);
+
+    return 0;
+}
+
 // 以红黑树为数据结构的 SET 方法；操作成功返回 0，否则返回 -1
 int rbtree_set(rbtree_t *tree, char *key, char *value)
 {
-    rbtree_node *node_search = rbtree_search(tree, key);
-
-    if (node_search != tree->nil) // 如果 key 已经存在，则更新其值
+    if (rbtree_exist(tree, key) != -1) // 如果 key 已经存在，则更新其值
     {
-        int ret = rbtree_mod(tree, key, value);
+        int ret = _rbtree_mod(tree, key, value);
         if (ret == 0)
         {
             LOG("kvstore_rbtree_set: key exist already, update key to new value\n");
             return 0;
         }
         else
+        {
             return -1;
+        }
     }
     else // 如果 key 不存在，则创建并插入新节点
     {
@@ -539,25 +556,6 @@ int rbtree_del(rbtree_t *tree, char *key)
         free(cur);
     }
     tree->count--;
-
-    return 0;
-}
-
-// 以红黑树为数据结构的 MOD 方法；操作成功返回 0，否则返回 -1
-int rbtree_mod(rbtree_t *tree, char *key, char *newValue)
-{
-    rbtree_node *node = rbtree_search(tree, key);
-    if (node == tree->nil)
-    {
-        return -1;
-    }
-
-    node->value = kvstore_malloc(strlen(newValue) + 1);
-    if (node->value == NULL)
-    {
-        return -1;
-    }
-    strcpy(node->value, newValue);
 
     return 0;
 }
