@@ -61,7 +61,7 @@ void test_case(int connfd, char *msg, char *pattern, char *casename)
     equals(pattern, result, casename);
 }
 
-// 数据存储引擎测试
+/* ------------------- array ------------------- */
 void array_testcase(int connfd)
 {
     test_case(connfd, "SET Name Luke", "SUCCESS", "SETcase");
@@ -95,7 +95,7 @@ void array_testcase_10w(int connfd)
     }
 }
 
-// 红黑树存储引擎测试
+/* ------------------- rbtree ------------------- */
 void rbtree_testcase(int connfd)
 {
     test_case(connfd, "RSET Name Luke", "SUCCESS", "RSETcase");
@@ -125,7 +125,39 @@ void rbtree_testcase_10w(int connfd)
     int i = 0;
     while (i++ < count)
     {
-        array_testcase(connfd);
+        rbtree_testcase(connfd);
+    }
+}
+/* ------------------- hash ------------------- */
+void hash_testcase(int connfd)
+{
+    test_case(connfd, "HSET Name Luke", "SUCCESS", "HSETcase");
+    test_case(connfd, "HGET Name", "Luke", "HGETcase");
+    test_case(connfd, "HCOUNT", "1", "HCOUNTcase");
+
+    test_case(connfd, "HMOD Name Bssn", "SUCCESS", "HMODcase");
+    test_case(connfd, "HGET Name", "Bssn", "HGETcase");
+    test_case(connfd, "HSET Name Lucky", "SUCCESS", "HSETcase");
+    test_case(connfd, "HGET Name", "Lucky", "HGETcase");
+    test_case(connfd, "HSET Age 21", "SUCCESS", "HSETcase");
+    test_case(connfd, "HGET Age", "21", "HGETcase");
+    test_case(connfd, "HCOUNT", "2", "HCOUNTcase");
+
+    test_case(connfd, "HDEL Name", "SUCCESS", "HDELcase");
+    test_case(connfd, "HGET Name", "ERROR", "HGETcase");
+    test_case(connfd, "HCOUNT", "1", "HCOUNTcase");
+
+    test_case(connfd, "HDEL Age", "SUCCESS", "HDELcase");
+    test_case(connfd, "HGET Age", "ERROR", "HGETcase");
+    test_case(connfd, "HCOUNT", "0", "HCOUNTcase");
+}
+void hash_testcase_10w(int connfd)
+{
+    int count = 100000;
+    int i = 0;
+    while (i++ < count)
+    {
+        hash_testcase(connfd);
     }
 }
 
@@ -185,32 +217,42 @@ int main(int argc, char *argv[])
     {
         // 单次测试
         array_testcase(connfd);
-        /*
-                printf("Array Test:\n");
-                struct timeval tv_begin;
-                gettimeofday(&tv_begin, NULL);
-                array_testcase_10w(connfd);
-                struct timeval tv_end;
-                gettimeofday(&tv_end, NULL);
-                int time_used = TIME_SUB_MS(tv_end, tv_begin);
-                printf("Array KVEngine 80W: time_used: %d, qps: %d\n", time_used, 800000 * 1000 / time_used);
-         */
+        // QPS测试
+        struct timeval tv_begin;
+        gettimeofday(&tv_begin, NULL);
+        array_testcase_10w(connfd);
+        struct timeval tv_end;
+        gettimeofday(&tv_end, NULL);
+        int time_used = TIME_SUB_MS(tv_end, tv_begin);
+        printf("Array KVEngine 10W: time_used: %d, qps: %d\n", time_used, 1600000 * 1000 / time_used);
     }
     /* 红黑树引擎测试 ./testcase -s 10.211.55.21 -p 9096 -m 2 */
     if (mode & 0x2)
     {
         // 单次测试
         rbtree_testcase(connfd);
-        /*
-                printf("RBTree Test:\n");
-                struct timeval tv_begin;
-                gettimeofday(&tv_begin, NULL);
-                rbtree_testcase_10w(connfd);
-                struct timeval tv_end;
-                gettimeofday(&tv_end, NULL);
-                int time_used = TIME_SUB_MS(tv_end, tv_begin);
-                printf("RBTREE KVEngine 80W: time_used: %d, qps: %d\n", time_used, 800000 * 1000 / time_used);
-        */
+        // QPS测试
+        struct timeval tv_begin;
+        gettimeofday(&tv_begin, NULL);
+        rbtree_testcase_10w(connfd);
+        struct timeval tv_end;
+        gettimeofday(&tv_end, NULL);
+        int time_used = TIME_SUB_MS(tv_end, tv_begin);
+        printf("RBTREE KVEngine 10W: time_used: %d, qps: %d\n", time_used, 1600000 * 1000 / time_used);
+    }
+    /* hash 引擎测试 ./testcase -s 10.211.55.21 -p 9096 -m 4 */
+    if (mode & 0x4)
+    {
+        // 单次测试
+        hash_testcase(connfd);
+        // QPS测试
+        struct timeval tv_begin;
+        gettimeofday(&tv_begin, NULL);
+        hash_testcase_10w(connfd);
+        struct timeval tv_end;
+        gettimeofday(&tv_end, NULL);
+        int time_used = TIME_SUB_MS(tv_end, tv_begin);
+        printf("HASH KVEngine 10W: time_used: %d, qps: %d\n", time_used, 1600000 * 1000 / time_used);
     }
 
     return 0;
