@@ -1,9 +1,9 @@
 target: kvstore client testcase
 
-src=kvstore.c epoll_entry.c kvstore_array.c ntyco_entry.c kvstore.h kvstore_rbtree.c
+src=kvstore.c kvstore.h epoll_entry.c ntyco_entry.c kvstore_array.c kvstore_rbtree.c kvstore_hash.c
 
 kvstore: ${src}
-	gcc ${src} -o kvstore -I./ -I ~/code/Ntyco/core -L ~/code/Ntyco -lntyco
+	gcc ${src} -o kvstore -I./ -I ./Ntyco/core -L ./Ntyco -lntyco
 
 client: client.c
 	gcc client.c -o client

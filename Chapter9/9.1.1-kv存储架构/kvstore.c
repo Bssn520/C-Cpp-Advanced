@@ -1,4 +1,3 @@
-#include "kvstore.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -6,12 +5,15 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include "kvstore.h"
+
 #define KVSTORE_MAX_TOKENS 128
 
 // 定义协议中使用的命令
 const char *commands[] = {
     "SET", "GET", "DEL", "MOD", "COUNT",
-    "RSET", "RGET", "RDEL", "RMOD", "RCOUNT"};
+    "RSET", "RGET", "RDEL", "RMOD", "RCOUNT",
+    "HSET", "HGET", "HDEL", "HMOD", "HCOUNT"};
 enum
 {
     KVS_CMD_START = 0,
@@ -26,6 +28,12 @@ enum
     KVS_CMD_RDEL,
     KVS_CMD_RMOD,
     KVS_CMD_RCOUNT,
+
+    KVS_CMD_HSET,
+    KVS_CMD_HGET,
+    KVS_CMD_HDEL,
+    KVS_CMD_HMOD,
+    KVS_CMD_HCOUNT,
     KVS_CMD_END
 };
 
@@ -42,7 +50,7 @@ void kvstore_free(void *ptr)
     }
 }
 
-// 开启红黑树适配层接口
+/* ------------------------ RBTREE ------------------------ */
 #if ENABLE_RBTREE_KVENGINE
 int kvstore_rbtree_create(rbtree_t *tree)
 {
@@ -73,16 +81,15 @@ int kvstore_rbtree_count(void)
     return rbtree_count(&Tree);
 }
 #endif
-
-// 开启数组适配层接口
+/* ------------------------ ARRAY ------------------------ */
 #if ENABLE_ARRAY_KVENGINE
 int kvstore_array_create(array_t *arr)
 {
-    return array_create(&Array);
+    return array_create(arr);
 }
 void kvstore_array_destroy(array_t *arr)
 {
-    return array_destroy(&Array);
+    return array_destroy(arr);
 }
 int kvstore_array_set(char *key, char *value)
 {
@@ -105,6 +112,37 @@ int kvstore_array_count(void)
     return array_count(&Array);
 }
 #endif
+/* ------------------------ HASH ------------------------ */
+#if ENABLE_HASH_KVENGINE
+int kvstore_hash_create(hashtable_t *hash)
+{
+    return create_hashtable(hash);
+}
+void kvstore_hash_destroy(hashtable_t *hash)
+{
+    return destroy_hashtable(hash);
+}
+int kvstore_hash_set(char *key, char *value)
+{
+    return put_kv_hashtable(&Hash, key, value);
+}
+char *kvstore_hash_get(char *key)
+{
+    return get_kv_hashtable(&Hash, key);
+}
+int kvstore_hash_del(char *key)
+{
+    return delete_kv_hashtable(&Hash, key);
+}
+int kvstore_hash_mod(char *key, char *newValue)
+{
+    return mod_kv_hashtable(&Hash, key, newValue);
+}
+int kvstore_hash_count(void)
+{
+    return count_hashtable(&Hash);
+}
+#endif
 
 // 用于分割提取发来的数据，如 SET KEY VALUE
 int kvstore_split_token(char *msg, char **tokens)
@@ -124,7 +162,7 @@ int kvstore_split_token(char *msg, char **tokens)
 
     return index;
 }
-
+// KVStore 协议
 int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
 {
     if (item == NULL || tokens == NULL || count == 0)
@@ -265,7 +303,7 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         int ret = kvstore_rbtree_del(tokens[1]);
         if (ret == 0)
         {
-            LOG("--- DEL %d ---\n\n", ret);
+            LOG("--- RDEL %d ---\n\n", ret);
             snprintf(msg, BUFFER_LENGTH, "SUCCESS");
         }
         else if (ret == -1)
@@ -280,7 +318,7 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         int ret = kvstore_rbtree_mod(tokens[1], tokens[2]);
         if (ret == 0)
         {
-            LOG("--- MOD %d ---\n\n", ret);
+            LOG("--- RMOD %d ---\n\n", ret);
             snprintf(msg, BUFFER_LENGTH, "SUCCESS");
         }
         else if (ret == -1)
@@ -301,6 +339,83 @@ int kvstore_parser_protocol(connection_t *item, char **tokens, int count)
         else
         {
             LOG("--- RCOUNT: %d ---\n\n", ret);
+            snprintf(msg, BUFFER_LENGTH, "%d", ret);
+        }
+        break;
+    }
+
+    /* 哈希结构对应的操作 */
+    case KVS_CMD_HSET:
+    {
+        int ret = kvstore_hash_set(tokens[1], tokens[2]);
+        if (ret == 0)
+        {
+            LOG("--- HSET: %d ---\n\n", ret);
+            snprintf(msg, BUFFER_LENGTH, "SUCCESS");
+        }
+        else if (ret == -1)
+        {
+            LOG("--- ERROR ---\n\n");
+            snprintf(msg, BUFFER_LENGTH, "ERROR");
+        }
+        break;
+    }
+    case KVS_CMD_HGET:
+    {
+        char *value = kvstore_hash_get(tokens[1]);
+        if (value)
+        {
+            LOG("---The value of %s is %s ---\n\n", tokens[1], value);
+            snprintf(msg, BUFFER_LENGTH, "%s", value);
+        }
+        else
+        {
+            LOG("--- ERROR ---\n\n");
+            snprintf(msg, BUFFER_LENGTH, "ERROR");
+        }
+        break;
+    }
+    case KVS_CMD_HDEL:
+    {
+        int ret = kvstore_hash_del(tokens[1]);
+        if (ret == 0)
+        {
+            LOG("--- HDEL %d ---\n\n", ret);
+            snprintf(msg, BUFFER_LENGTH, "SUCCESS");
+        }
+        else if (ret == -1)
+        {
+            LOG("--- ERROR ---\n\n");
+            snprintf(msg, BUFFER_LENGTH, "ERROR");
+        }
+        break;
+    }
+    case KVS_CMD_HMOD:
+    {
+        int ret = kvstore_hash_mod(tokens[1], tokens[2]);
+        if (ret == 0)
+        {
+            LOG("--- HMOD %d ---\n\n", ret);
+            snprintf(msg, BUFFER_LENGTH, "SUCCESS");
+        }
+        else if (ret == -1)
+        {
+            LOG("--- NO EXIST ---\n\n");
+            snprintf(msg, BUFFER_LENGTH, "NO EXIST");
+        }
+        break;
+    }
+    case KVS_CMD_HCOUNT:
+    {
+        int ret = kvstore_hash_count();
+        if (ret < 0)
+        {
+            LOG("--- ERROR ---\n\n");
+            snprintf(msg, BUFFER_LENGTH, "ERROR");
+        }
+        else
+        {
+            LOG("--- HCOUNT: %d ---\n\n", ret);
             snprintf(msg, BUFFER_LENGTH, "%d", ret);
         }
         break;
@@ -338,16 +453,24 @@ int kvstore_request(connection_t *item)
 int init_kvengine(void)
 {
 #if ENABLE_ARRAY_KVENGINE
-    kvstore_array_create(&Array);
+    int ret_array_engine = kvstore_array_create(&Array);
+    if (ret_array_engine != 0)
+        return -1;
 #endif
 
 #if ENABLE_RBTREE_KVENGINE
-    int ret = rbtree_create(&Tree);
-    if (ret == 0)
-        return 0;
+    int ret_rbtree_engine = rbtree_create(&Tree);
+    if (ret_rbtree_engine != 0)
+        return -1;
 #endif
-    LOG("Error: 未启用任何存储引擎\n");
-    return -1;
+
+#if ENABLE_HASH_KVENGINE
+    int ret_hash_engine = kvstore_hash_create(&Hash);
+    if (ret_hash_engine != 0)
+        return -1;
+#endif
+    LOG("引擎已开启\\n");
+    return 0;
 }
 // 退出存储引擎
 int exit_kvengine(void)
@@ -358,6 +481,10 @@ int exit_kvengine(void)
 
 #if ENABLE_RBTREE_KVENGINE
     kvstore_rbtree_destroy(&Tree);
+#endif
+
+#if ENABLE_HASH_KVENGINE
+    kvstore_hash_destroy(&Hash);
 #endif
     LOG("引擎已退出\n");
     return 0;

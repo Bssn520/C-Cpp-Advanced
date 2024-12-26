@@ -5,7 +5,7 @@
 
 /* KV存储使用的组件选择 */
 // 日志打印宏定义
-#define ENABLE_LOG
+// #define ENABLE_LOG
 #ifdef ENABLE_LOG
 #define LOG(_fmt, ...) fprintf(stdout, "[%s : %d]: " _fmt, __FILE__, __LINE__, ##__VA_ARGS__)
 #else
@@ -15,6 +15,7 @@
 // 是否开启KV存储相关的存储引擎
 #define ENABLE_ARRAY_KVENGINE 1
 #define ENABLE_RBTREE_KVENGINE 1
+#define ENABLE_HASH_KVENGINE 1
 
 // 选择 KV存储 使用的网络组件
 #define NETWORK_EPOLL 0
@@ -56,7 +57,6 @@ int kvstore_request(connection_t *item);
 /* 基础存储组件 */
 // 使用 数组 作为KV存储的数据结构
 #if ENABLE_ARRAY_KVENGINE
-
 #define KVS_ARRAY_SIZE 1024
 struct kvs_array_item
 {
@@ -79,12 +79,10 @@ char *array_get(array_t *arr, char *key);
 int array_del(array_t *arr, char *key);
 int array_mod(array_t *arr, char *key, char *value);
 int array_count(array_t *arr);
-
 #endif
 
-// 红黑树引擎对应的CURD接口
+// 使用 红黑树 作为KV存储的数据结构
 #if ENABLE_RBTREE_KVENGINE
-
 typedef struct _rbtree rbtree_t;
 extern rbtree_t Tree;
 
@@ -102,6 +100,23 @@ int rbtree_del(rbtree_t *tree, char *key);
 int rbtree_mod(rbtree_t *tree, char *key, char *newValue);
 // 以红黑树为数据结构的 COUNT 方法；操作成功返回 红黑树的节点数量
 int rbtree_count(rbtree_t *tree);
+#endif
+
+
+// 使用 哈希表 作为KV存储的数据结构
+#if ENABLE_HASH_KVENGINE
+
+typedef struct hashtable_s hashtable_t;
+extern hashtable_t Hash;
+
+// 哈希引擎对应的CURD接口
+int create_hashtable(hashtable_t *hash);
+void destroy_hashtable(hashtable_t *hash);
+int put_kv_hashtable(hashtable_t *hash, char *key, char *value);
+char *get_kv_hashtable(hashtable_t *hash, char *key);
+int delete_kv_hashtable(hashtable_t *hash, char *key);
+int mod_kv_hashtable(hashtable_t *hash, char *key, char *value);
+int count_hashtable(hashtable_t *hash);
 
 #endif
 
